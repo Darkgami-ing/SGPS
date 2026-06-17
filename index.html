@@ -134,7 +134,9 @@ function obtenerYEnviar() {
 async function enviarUbicacion(posicion) {
 
     const datos = {
-        fecha: new Date().toISOString(),
+        fecha: new Date().toLocaleString("es-PE", {
+    timeZone: "America/Lima"
+}),
         dni: localStorage.getItem("dni"),
         telefono: localStorage.getItem("telefono"),
         latitud: posicion.coords.latitude,
