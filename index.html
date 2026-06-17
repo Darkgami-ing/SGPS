@@ -1,0 +1,102 @@
+<script>
+
+window.onload = function () {
+
+    // Recuperar datos guardados
+    const dniGuardado = localStorage.getItem("dni");
+    const telefonoGuardado = localStorage.getItem("telefono");
+
+    if (dniGuardado) {
+        document.getElementById("dni").value = dniGuardado;
+    }
+
+    if (telefonoGuardado) {
+        document.getElementById("telefono").value = telefonoGuardado;
+    }
+
+    // Si ya existen, iniciar seguimiento automáticamente
+    if (dniGuardado && telefonoGuardado) {
+        iniciarSeguimiento();
+    }
+};
+
+function enviarUbicacion() {
+
+    const dni = document.getElementById("dni").value.trim();
+    const telefono = document.getElementById("telefono").value.trim();
+
+    if (dni.length !== 8) {
+        alert("Ingrese un DNI válido");
+        return;
+    }
+
+    if (telefono.length !== 9) {
+        alert("Ingrese un teléfono válido");
+        return;
+    }
+
+    // Guardar datos
+    localStorage.setItem("dni", dni);
+    localStorage.setItem("telefono", telefono);
+
+    iniciarSeguimiento();
+}
+
+function iniciarSeguimiento() {
+
+    document.getElementById("estado").innerText =
+        "Iniciando seguimiento GPS...";
+
+    navigator.geolocation.watchPosition(
+        async function (posicion) {
+
+            const datos = {
+                dni: localStorage.getItem("dni"),
+                telefono: localStorage.getItem("telefono"),
+                latitud: posicion.coords.latitude,
+                longitud: posicion.coords.longitude,
+                precision: posicion.coords.accuracy,
+                fecha: new Date().toISOString()
+            };
+
+            console.log(datos);
+
+            try {
+
+                await fetch(
+                    "https://script.google.com/macros/s/TU_URL/exec",
+                    {
+                        method: "POST",
+                        headers: {
+                            "Content-Type": "application/json"
+                        },
+                        body: JSON.stringify(datos)
+                    }
+                );
+
+                document.getElementById("estado").innerText =
+                    "Ubicación enviada: " +
+                    datos.latitud +
+                    ", " +
+                    datos.longitud;
+
+            } catch (error) {
+                console.log(error);
+            }
+
+        },
+        function (error) {
+
+            document.getElementById("estado").innerText =
+                "No se pudo obtener la ubicación.";
+
+        },
+        {
+            enableHighAccuracy: true,
+            maximumAge: 0,
+            timeout: 10000
+        }
+    );
+}
+
+</script>
