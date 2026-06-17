@@ -3,13 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Registro GPS</title>
+    <title>Seguimiento GPS</title>
 
     <style>
         body {
             font-family: Arial, sans-serif;
             max-width: 400px;
-            margin: 50px auto;
+            margin: 30px auto;
             padding: 20px;
             text-align: center;
         }
@@ -34,158 +34,169 @@
 </head>
 <body>
 
-    <h2>Registro de Ubicación GPS</h2>
+<h2>Seguimiento GPS</h2>
 
-    <input
-        type="text"
-        id="dni"
-        placeholder="Ingrese su DNI"
-        maxlength="8"
-    >
+<input
+    type="text"
+    id="dni"
+    placeholder="Ingrese su DNI"
+    maxlength="8">
 
-    <input
-        type="text"
-        id="telefono"
-        placeholder="Ingrese su teléfono"
-        maxlength="9"
-    >
+<input
+    type="text"
+    id="telefono"
+    placeholder="Ingrese su teléfono"
+    maxlength="9">
 
-    <button onclick="registrarUsuario()">
-        Iniciar Seguimiento
-    </button>
+<button onclick="registrarUsuario()">
+    Iniciar Seguimiento
+</button>
 
-    <p id="estado">
-        Ingrese sus datos para comenzar.
-    </p>
+<p id="estado">
+    Esperando inicio...
+</p>
 
-    <script>
+<script>
 
-        window.onload = function () {
+let temporizador = null;
 
-            const dni = localStorage.getItem("dni");
-            const telefono = localStorage.getItem("telefono");
+window.onload = function () {
 
-            if (dni) {
-                document.getElementById("dni").value = dni;
-            }
+    const dni = localStorage.getItem("dni");
+    const telefono = localStorage.getItem("telefono");
 
-            if (telefono) {
-                document.getElementById("telefono").value = telefono;
-            }
+    if (dni) {
+        document.getElementById("dni").value = dni;
+    }
 
-            if (dni && telefono) {
-                iniciarSeguimiento();
-            }
-        };
+    if (telefono) {
+        document.getElementById("telefono").value = telefono;
+    }
 
-        function registrarUsuario() {
+    if (dni && telefono) {
+        iniciarSeguimiento();
+    }
+};
 
-            const dni = document.getElementById("dni").value.trim();
-            const telefono =
-                document.getElementById("telefono").value.trim();
+function registrarUsuario() {
 
-            if (dni.length !== 8) {
-                alert("Ingrese un DNI válido de 8 dígitos.");
-                return;
-            }
+    const dni = document.getElementById("dni").value.trim();
+    const telefono =
+        document.getElementById("telefono").value.trim();
 
-            if (telefono.length !== 9) {
-                alert("Ingrese un teléfono válido de 9 dígitos.");
-                return;
-            }
+    if (dni.length !== 8) {
+        alert("Ingrese un DNI válido.");
+        return;
+    }
 
-            localStorage.setItem("dni", dni);
-            localStorage.setItem("telefono", telefono);
+    if (telefono.length !== 9) {
+        alert("Ingrese un teléfono válido.");
+        return;
+    }
 
-            iniciarSeguimiento();
-        }
+    localStorage.setItem("dni", dni);
+    localStorage.setItem("telefono", telefono);
 
-        function iniciarSeguimiento() {
+    iniciarSeguimiento();
+}
 
-            document.getElementById("estado").innerText =
-                "Esperando ubicación...";
+function iniciarSeguimiento() {
 
-            if (!navigator.geolocation) {
-                document.getElementById("estado").innerText =
-                    "Este dispositivo no soporta GPS.";
-                return;
-            }
+    if (temporizador !== null) {
+        return;
+    }
 
-            navigator.geolocation.watchPosition(
-                enviarUbicacion,
-                mostrarError,
-                {
-                    enableHighAccuracy: true,
-                    maximumAge: 0,
-                    timeout: 10000
-                }
-            );
-        }
+    document.getElementById("estado").innerHTML =
+        "Seguimiento iniciado.<br>" +
+        "Enviando ubicación cada 1 minuto...";
 
-        async function enviarUbicacion(posicion) {
+    obtenerYEnviar();
 
-            const datos = {
-                dni: localStorage.getItem("dni"),
-                telefono: localStorage.getItem("telefono"),
-                latitud: posicion.coords.latitude,
-                longitud: posicion.coords.longitude,
-                precision: posicion.coords.accuracy,
-                fecha: new Date().toISOString()
-            };
+    temporizador = setInterval(
+        obtenerYEnviar,
+        60000
+    );
+}
 
-            console.log(datos);
+function obtenerYEnviar() {
 
-            document.getElementById("estado").innerHTML =
-                "📍 Latitud: " + datos.latitud +
-                "<br>📍 Longitud: " + datos.longitud +
-                "<br>📡 Precisión: " + datos.precision + " m";
-
-            try {
-
-    const respuesta = await fetch(
-        "https://script.google.com/macros/s/AKfycbyNNqPPOqlbo30joIrZPp1wSQcqwFKIdepgvOo-cwZVvL3VEaHCmSJxxdDoS0Xl00azbw/exec",
+    navigator.geolocation.getCurrentPosition(
+        enviarUbicacion,
+        mostrarError,
         {
-            method: "POST",
-            body: JSON.stringify(datos)
+            enableHighAccuracy: true,
+            timeout: 10000,
+            maximumAge: 0
         }
     );
-
-    const texto = await respuesta.text();
-
-    console.log("Respuesta:", texto);
-
-} catch (error) {
-
-    console.log("ERROR:", error);
-
 }
-        }
 
-        function mostrarError(error) {
+async function enviarUbicacion(posicion) {
 
-            switch (error.code) {
-                case error.PERMISSION_DENIED:
-                    document.getElementById("estado").innerText =
-                        "Debe permitir el acceso a la ubicación.";
-                    break;
+    const datos = {
+        fecha: new Date().toISOString(),
+        dni: localStorage.getItem("dni"),
+        telefono: localStorage.getItem("telefono"),
+        latitud: posicion.coords.latitude,
+        longitud: posicion.coords.longitude,
+        precision: posicion.coords.accuracy
+    };
 
-                case error.POSITION_UNAVAILABLE:
-                    document.getElementById("estado").innerText =
-                        "Ubicación no disponible.";
-                    break;
+    console.log(datos);
 
-                case error.TIMEOUT:
-                    document.getElementById("estado").innerText =
-                        "Tiempo de espera agotado.";
-                    break;
+    document.getElementById("estado").innerHTML =
+        "📍 Última ubicación enviada<br><br>" +
+        "Latitud: " + datos.latitud +
+        "<br>" +
+        "Longitud: " + datos.longitud +
+        "<br>" +
+        "Precisión: " + datos.precision + " m" +
+        "<br><br>" +
+        "Próximo envío en 1 minuto.";
 
-                default:
-                    document.getElementById("estado").innerText =
-                        "Error al obtener la ubicación.";
+    try {
+
+        await fetch(
+            "https://script.google.com/macros/s/AKfycbyNNqPPOqlbo30joIrZPp1wSQcqwFKIdepgvOo-cwZVvL3VEaHCmSJxxdDoS0Xl00azbw/exec",
+            {
+                method: "POST",
+                body: JSON.stringify(datos)
             }
-        }
+        );
 
-    </script>
+    } catch (error) {
+
+        console.error("Error:", error);
+
+    }
+}
+
+function mostrarError(error) {
+
+    switch (error.code) {
+
+        case error.PERMISSION_DENIED:
+            document.getElementById("estado").innerText =
+                "Debe permitir el acceso a la ubicación.";
+            break;
+
+        case error.POSITION_UNAVAILABLE:
+            document.getElementById("estado").innerText =
+                "Ubicación no disponible.";
+            break;
+
+        case error.TIMEOUT:
+            document.getElementById("estado").innerText =
+                "Tiempo de espera agotado.";
+            break;
+
+        default:
+            document.getElementById("estado").innerText =
+                "Error obteniendo la ubicación.";
+    }
+}
+
+</script>
 
 </body>
 </html>
