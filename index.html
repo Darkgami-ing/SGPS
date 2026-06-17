@@ -1,54 +1,128 @@
-<script>
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Registro GPS</title>
 
-window.onload = function () {
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 400px;
+            margin: 50px auto;
+            padding: 20px;
+            text-align: center;
+        }
 
-    // Recuperar datos guardados
-    const dniGuardado = localStorage.getItem("dni");
-    const telefonoGuardado = localStorage.getItem("telefono");
+        input,
+        button {
+            width: 100%;
+            padding: 12px;
+            margin-top: 10px;
+            box-sizing: border-box;
+        }
 
-    if (dniGuardado) {
-        document.getElementById("dni").value = dniGuardado;
-    }
+        button {
+            cursor: pointer;
+        }
 
-    if (telefonoGuardado) {
-        document.getElementById("telefono").value = telefonoGuardado;
-    }
+        #estado {
+            margin-top: 20px;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
 
-    // Si ya existen, iniciar seguimiento automáticamente
-    if (dniGuardado && telefonoGuardado) {
-        iniciarSeguimiento();
-    }
-};
+    <h2>Registro de Ubicación GPS</h2>
 
-function enviarUbicacion() {
+    <input
+        type="text"
+        id="dni"
+        placeholder="Ingrese su DNI"
+        maxlength="8"
+    >
 
-    const dni = document.getElementById("dni").value.trim();
-    const telefono = document.getElementById("telefono").value.trim();
+    <input
+        type="text"
+        id="telefono"
+        placeholder="Ingrese su teléfono"
+        maxlength="9"
+    >
 
-    if (dni.length !== 8) {
-        alert("Ingrese un DNI válido");
-        return;
-    }
+    <button onclick="registrarUsuario()">
+        Iniciar Seguimiento
+    </button>
 
-    if (telefono.length !== 9) {
-        alert("Ingrese un teléfono válido");
-        return;
-    }
+    <p id="estado">
+        Ingrese sus datos para comenzar.
+    </p>
 
-    // Guardar datos
-    localStorage.setItem("dni", dni);
-    localStorage.setItem("telefono", telefono);
+    <script>
 
-    iniciarSeguimiento();
-}
+        window.onload = function () {
 
-function iniciarSeguimiento() {
+            const dni = localStorage.getItem("dni");
+            const telefono = localStorage.getItem("telefono");
 
-    document.getElementById("estado").innerText =
-        "Iniciando seguimiento GPS...";
+            if (dni) {
+                document.getElementById("dni").value = dni;
+            }
 
-    navigator.geolocation.watchPosition(
-        async function (posicion) {
+            if (telefono) {
+                document.getElementById("telefono").value = telefono;
+            }
+
+            if (dni && telefono) {
+                iniciarSeguimiento();
+            }
+        };
+
+        function registrarUsuario() {
+
+            const dni = document.getElementById("dni").value.trim();
+            const telefono =
+                document.getElementById("telefono").value.trim();
+
+            if (dni.length !== 8) {
+                alert("Ingrese un DNI válido de 8 dígitos.");
+                return;
+            }
+
+            if (telefono.length !== 9) {
+                alert("Ingrese un teléfono válido de 9 dígitos.");
+                return;
+            }
+
+            localStorage.setItem("dni", dni);
+            localStorage.setItem("telefono", telefono);
+
+            iniciarSeguimiento();
+        }
+
+        function iniciarSeguimiento() {
+
+            document.getElementById("estado").innerText =
+                "Esperando ubicación...";
+
+            if (!navigator.geolocation) {
+                document.getElementById("estado").innerText =
+                    "Este dispositivo no soporta GPS.";
+                return;
+            }
+
+            navigator.geolocation.watchPosition(
+                enviarUbicacion,
+                mostrarError,
+                {
+                    enableHighAccuracy: true,
+                    maximumAge: 0,
+                    timeout: 10000
+                }
+            );
+        }
+
+        async function enviarUbicacion(posicion) {
 
             const datos = {
                 dni: localStorage.getItem("dni"),
@@ -60,6 +134,11 @@ function iniciarSeguimiento() {
             };
 
             console.log(datos);
+
+            document.getElementById("estado").innerHTML =
+                "📍 Latitud: " + datos.latitud +
+                "<br>📍 Longitud: " + datos.longitud +
+                "<br>📡 Precisión: " + datos.precision + " m";
 
             try {
 
@@ -74,29 +153,36 @@ function iniciarSeguimiento() {
                     }
                 );
 
-                document.getElementById("estado").innerText =
-                    "Ubicación enviada: " +
-                    datos.latitud +
-                    ", " +
-                    datos.longitud;
-
             } catch (error) {
-                console.log(error);
+                console.error(error);
             }
-
-        },
-        function (error) {
-
-            document.getElementById("estado").innerText =
-                "No se pudo obtener la ubicación.";
-
-        },
-        {
-            enableHighAccuracy: true,
-            maximumAge: 0,
-            timeout: 10000
         }
-    );
-}
 
-</script>
+        function mostrarError(error) {
+
+            switch (error.code) {
+                case error.PERMISSION_DENIED:
+                    document.getElementById("estado").innerText =
+                        "Debe permitir el acceso a la ubicación.";
+                    break;
+
+                case error.POSITION_UNAVAILABLE:
+                    document.getElementById("estado").innerText =
+                        "Ubicación no disponible.";
+                    break;
+
+                case error.TIMEOUT:
+                    document.getElementById("estado").innerText =
+                        "Tiempo de espera agotado.";
+                    break;
+
+                default:
+                    document.getElementById("estado").innerText =
+                        "Error al obtener la ubicación.";
+            }
+        }
+
+    </script>
+
+</body>
+</html>
